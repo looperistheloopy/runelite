@@ -24,16 +24,15 @@
  */
 package net.runelite.client.plugins.raids;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import javax.inject.Inject;
 import net.runelite.api.Client;
-import static net.runelite.api.MenuAction.RUNELITE_OVERLAY_CONFIG;
+import net.runelite.api.Player;
 import net.runelite.api.Varbits;
 import static net.runelite.client.plugins.raids.RaidsPlugin.POINTS_FORMAT;
 import net.runelite.client.ui.overlay.Overlay;
-import static net.runelite.client.ui.overlay.OverlayManager.OPTION_CONFIGURE;
-import net.runelite.client.ui.overlay.OverlayMenuEntry;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayPriority;
 import net.runelite.client.ui.overlay.components.LineComponent;
@@ -50,12 +49,10 @@ public class RaidsPointsOverlay extends Overlay
 	private final PanelComponent panel = new PanelComponent();
 
 	@Inject
-	private RaidsPointsOverlay(RaidsPlugin plugin)
+	public RaidsPointsOverlay()
 	{
-		super(plugin);
 		setPosition(OverlayPosition.TOP_RIGHT);
 		setPriority(OverlayPriority.HIGH);
-		getMenuEntries().add(new OverlayMenuEntry(RUNELITE_OVERLAY_CONFIG, OPTION_CONFIGURE, "Raids overlay"));
 	}
 
 	@Override
@@ -72,23 +69,54 @@ public class RaidsPointsOverlay extends Overlay
 
 		panel.getChildren().clear();
 		panel.getChildren().add(LineComponent.builder()
-			.left("Total:")
-			.right(POINTS_FORMAT.format(totalPoints))
-			.build());
+				.left("Total:")
+				.right(POINTS_FORMAT.format(totalPoints))
+				.build());
 
 		panel.getChildren().add(LineComponent.builder()
-			.left(client.getLocalPlayer().getName() + ":")
-			.right(POINTS_FORMAT.format(personalPoints))
-			.build());
+				.left(client.getLocalPlayer().getName() + ":")
+				.right(POINTS_FORMAT.format(personalPoints))
+				.build());
 
 		if (partySize > 1)
 		{
 			panel.getChildren().add(LineComponent.builder()
-				.left("Party size:")
-				.right(String.valueOf(partySize))
-				.build());
+					.left("Party size:")
+					.right(String.valueOf(partySize))
+					.build());
+		}
+
+		if (totalPoints == 0) // Calculates average combat level of the party before the raid has begun
+		{
+			if (averageCombat() < 115)
+			{
+				panel.getChildren().add(LineComponent.builder()
+						.left("Average combat:")
+						.right(String.valueOf(averageCombat()))
+						.rightColor(Color.RED)
+						.build());
+			}
+			else
+			{
+				panel.getChildren().add(LineComponent.builder()
+						.left("Average combat:")
+						.right(String.valueOf(averageCombat()))
+						.rightColor(Color.GREEN)
+						.build());
+			}
+
 		}
 
 		return panel.render(graphics);
+	}
+	private int averageCombat()
+	{
+		int sumOfCombatLevels = 0;
+
+		for (Player currPlayer :client.getPlayers())
+		{
+			sumOfCombatLevels += currPlayer.getCombatLevel();
+		}
+		return sumOfCombatLevels / client.getPlayers().size();
 	}
 }
